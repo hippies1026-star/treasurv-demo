@@ -1,0 +1,48 @@
+:root { --purple:#7149e8; --ink:#202438; --muted:#626b80; }
+.stApp { background:#f7f8fc; }
+[data-testid="stHeader"] { background:rgba(247,248,252,.94); }
+[data-testid="stSidebar"] { background:#fff; border-right:1px solid #e8eaf2; }
+[data-testid="stSidebarCollapseButton"], [data-testid="stSidebarCollapsedControl"] { visibility:visible !important; opacity:1 !important; display:flex !important; }
+[data-testid="stSidebarCollapseButton"] button::after { content:"‹"; color:#5133a4; font-size:28px; }
+[data-testid="stSidebarCollapsedControl"] button::after { content:"☰"; color:#5133a4; font-size:22px; }
+[data-testid="stSidebarCollapseButton"] [data-testid="stIconMaterial"], [data-testid="stSidebarCollapsedControl"] [data-testid="stIconMaterial"] { display:none; }
+.block-container { max-width:1440px; padding:4.4rem 2.5rem 3rem; }
+.metric-grid { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:16px; }
+.metric-value { white-space:nowrap; }
+@media(max-width:1200px) { .metric-grid { grid-template-columns:repeat(2,minmax(0,1fr)); } }
+@media(max-width:600px) { .metric-grid { grid-template-columns:1fr; } }
+h1,h2,h3 { letter-spacing:-.035em; color:var(--ink); }
+h1 { font-size:2.05rem !important; font-weight:750 !important; }
+h3 { font-size:1.15rem !important; }
+.brand { display:flex; align-items:center; gap:12px; margin:4px 0 24px; }
+.logo { display:grid; place-items:center; background:var(--purple); color:white; width:42px; height:42px; border-radius:14px; font-size:19px; font-weight:800; letter-spacing:-1px; }
+.brand-name { font-size:22px; font-weight:750; letter-spacing:-.8px; }
+.eyebrow { font-size:11px; font-weight:750; letter-spacing:1.8px; color:var(--purple); margin-bottom:8px; }
+.muted { color:var(--muted); font-size:14px; line-height:1.7; }
+.hero { padding:26px 28px; border:1px solid #ded5fb; border-radius:22px; background:linear-gradient(120deg,#f0eaff,#fff 90%); margin:16px 0 22px; }
+.hero-title { font-size:25px; font-weight:750; letter-spacing:-1px; color:#35245d; margin:7px 0; }
+.tag { display:inline-block; padding:5px 10px; background:#ede7ff; color:#5133a4; border-radius:7px; font-size:12px; font-weight:650; }
+.metric-card { padding:22px; min-height:152px; border:1px solid #e5e7f0; border-radius:18px; background:white; }
+.metric-label { font-size:14px; color:var(--muted); font-weight:550; }
+.metric-value { font-size:30px; font-weight:780; letter-spacing:-1.3px; margin:11px 0 6px; font-variant-numeric:tabular-nums; }
+.metric-note { font-size:12px; color:var(--muted); }
+.metric-card.accent { background:#7149e8; border-color:#7149e8; color:#fff; }
+.metric-card.accent .metric-label,.metric-card.accent .metric-note { color:#f1ecff; }
+[data-testid="stVerticalBlockBorderWrapper"] > div { border-radius:18px !important; }
+.stButton button,.stDownloadButton button { border-radius:11px; min-height:42px; font-weight:600; transition:background-color .15s,box-shadow .15s; }
+.stButton button:hover { box-shadow:0 3px 12px #34224b12; }
+button:focus-visible,a:focus-visible,input:focus-visible { outline:3px solid #997cf0 !important; outline-offset:3px; }
+[data-testid="stSidebar"] .stButton button { text-align:left; justify-content:flex-start; border:0; padding-left:14px; }
+[data-testid="stSidebar"] .stButton button p { text-align:left; width:100%; }
+[data-testid="stSidebar"] .stButton button [data-testid="stMarkdownContainer"] { width:100%; text-align:left; }
+[data-testid="stSidebar"] .stButton button[kind="secondary"] { background:transparent; color:#536078; }
+[data-testid="stSidebar"] .stButton button[kind="secondary"]:hover { background:#f2effb; color:#5133a4; }
+.footer { border-top:1px solid #e7e9f1; padding-top:20px; margin-top:36px; color:#697185; font-size:12px; line-height:1.8; }
+@media(max-width:1100px) {
+ .block-container { padding-left:1rem; padding-right:1rem; padding-top:4rem; }
+ .hero { padding:20px; } .hero-title { font-size:21px; } .metric-value { font-size:26px; }
+ [data-testid="stHorizontalBlock"] { flex-wrap:wrap !important; }
+ [data-testid="stColumn"] { min-width:100% !important; flex:1 1 100% !important; }
+ .metric-card { min-height:120px; }
+}
+@media(prefers-reduced-motion:reduce) { * { transition:none !important; animation:none !important; } }
