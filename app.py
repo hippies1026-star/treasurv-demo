@@ -21,9 +21,17 @@ load_dotenv(ROOT / ".env")
 st.set_page_config(page_title="TreaSurv · 기업 자금운용", page_icon=str(ROOT / "logo.svg"), layout="wide", initial_sidebar_state="expanded")
 st.html("<style>" + (ROOT / "styles.css").read_text(encoding="utf-8") + "</style>")
 
+def secret(name, default=""):
+    try:
+        return str(st.secrets.get(name, os.getenv(name, default)))
+    except (FileNotFoundError, st.errors.StreamlitSecretNotFoundError):
+        return os.getenv(name, default)
+
+
+
 DEFAULT_STATE = {"data": demo(), "page": "대시보드", "entered": False, "history": [],
                  "logs": [], "approved": None, "proposal": None, "draft_policy": None,
-                 "revision": 0, "last_sync": "데모 기본값", "ai_enabled": False}
+                 "revision": 0, "last_sync": "데모 기본값", "ai_enabled": bool(secret("GROQ_API_KEY").strip())}
 for key, value in DEFAULT_STATE.items():
     if key not in st.session_state:
         st.session_state[key] = copy.deepcopy(value)
@@ -103,11 +111,6 @@ def csv_bytes(rows):
     return out.getvalue().encode("utf-8-sig")
 
 
-def secret(name, default=""):
-    try:
-        return str(st.secrets.get(name, os.getenv(name, default)))
-    except (FileNotFoundError, st.errors.StreamlitSecretNotFoundError):
-        return os.getenv(name, default)
 
 
 def overview():
@@ -413,7 +416,7 @@ def settings_page():
         def set_ai_mode():
             S.ai_enabled = S._ai_enabled
         st.toggle("Groq AI 사용",value=S.ai_enabled,key="_ai_enabled",on_change=set_ai_mode,disabled=not configured)
-        st.caption("켜면 AI CFO 질문과 집계 재무정보·사업계획이 Groq로 전송됩니다. 실제 개인정보 대신 데모 데이터로 시연하세요.")
+        st.caption("API 키가 설정되어 있으면 처음 접속할 때 자동으로 켜집니다. 질문을 보낼 때 질문과 집계 재무정보·사업계획이 Groq로 전송됩니다. 실제 개인정보 대신 데모 데이터로 시연하세요.")
     with st.expander("데모 환경 안내"):
         st.write("TreaSurv · 주식회사 트레서브랩스 (가상)")
         st.write("대표자: 가태용 / 본사: 서울특별시 동대문구 한국외국어대학교 근처 자취방 (데모)")
