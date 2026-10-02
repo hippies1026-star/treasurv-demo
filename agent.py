@@ -1,8 +1,6 @@
 """Groq tool-calling adapter. Plans are proposals only, never direct mutations."""
 import json
 import logging
-import urllib.request
-import urllib.error
 from finance_engine import analyze, forecast, validate_plan
 
 logger = logging.getLogger(__name__)
@@ -10,19 +8,19 @@ logger = logging.getLogger(__name__)
 
 def api_error(exc):
     """Report safe diagnostics only: never log response bodies or credentials."""
-    status = exc.code
+    status = exc.status_code
     code = "unclassified"
     try:
-        body = exc.read(65536)
-        data = json.loads(body)
+        data = exc.response.json()
         error = data.get("error", {}) if isinstance(data, dict) else {}
         candidate = error.get("code") if isinstance(error, dict) else None
         if isinstance(candidate, str) and candidate in {"model_not_found", "model_decommissioned", "model_permission_blocked",
+                         "model_permission_blocked_org", "model_permission_blocked_project",
                          "organization_restricted", "invalid_api_key", "rate_limit_exceeded",
                          "tool_use_failed", "context_length_exceeded", "invalid_request_error"}:
             code = candidate
     except (OSError, ValueError, TypeError):
-        pass
+        code = "non_json_response"
     reasons = {
         400: "요청이 거부되었습니다. 모델 이름과 도구 호출 형식을 확인하세요.",
         401: "API 키가 거부되었습니다. Streamlit Secrets의 키를 확인하세요.",
@@ -80,16 +78,22 @@ def ask(question, d, history, key, model):
     for _ in range(4):
         payload = {"model": model, "messages": messages, "tools": TOOLS,
                    "tool_choice": "auto", "temperature": 0.2, "max_completion_tokens": 1600}
-        request = urllib.request.Request("https://api.groq.com/openai/v1/chat/completions",
-            data=json.dumps(payload).encode(), headers={"Authorization": "Bearer " + key, "Content-Type": "application/json"})
         try:
-            with urllib.request.urlopen(request, timeout=25) as response:
-                message = json.load(response)["choices"][0]["message"]
-        except urllib.error.HTTPError as exc:
+            import groq
+        except ImportError:
+            raise RuntimeError("Groq SDK가 설치되지 않았습니다. requirements.txt를 함께 업데이트하세요.") from None
+        try:
+            with groq.Groq(api_key=key, timeout=25.0, max_retries=0) as client:
+                completion = client.chat.completions.create(**payload)
+                message = completion.choices[0].message.to_dict()
+        except groq.APIStatusError as exc:
             raise api_error(exc) from None
-        except (urllib.error.URLError, TimeoutError, KeyError, ValueError, IndexError, TypeError) as exc:
-            logger.error("TreaSurv Groq connection_or_response_error=%s", type(exc).__name__)
-            raise RuntimeError("AI 연결에 실패했습니다. 네트워크와 모델 설정을 확인하세요.") from None
+        except groq.APIConnectionError as exc:
+            logger.error("TreaSurv Groq connection_error=%s", type(exc).__name__)
+            raise RuntimeError("Groq 연결에 실패했습니다. 네트워크 연결 상태를 확인하세요.") from None
+        except (KeyError, ValueError, IndexError, TypeError, AttributeError) as exc:
+            logger.error("TreaSurv Groq response_error=%s", type(exc).__name__)
+            raise RuntimeError("Groq 응답 형식을 처리하지 못했습니다.") from None
         calls = message.get("tool_calls") or []
         if not calls:
             return message.get("content") or "응답이 비어 있습니다. 다시 질문해 주세요.", proposal
