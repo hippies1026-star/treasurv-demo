@@ -1,8 +1,40 @@
 """Groq tool-calling adapter. Plans are proposals only, never direct mutations."""
 import json
+import logging
 import urllib.request
 import urllib.error
 from finance_engine import analyze, forecast, validate_plan
+
+logger = logging.getLogger(__name__)
+
+
+def api_error(exc):
+    """Report safe diagnostics only: never log response bodies or credentials."""
+    status = exc.code
+    code = "unclassified"
+    try:
+        body = exc.read(65536)
+        data = json.loads(body)
+        error = data.get("error", {}) if isinstance(data, dict) else {}
+        candidate = error.get("code") if isinstance(error, dict) else None
+        if isinstance(candidate, str) and candidate in {"model_not_found", "model_decommissioned", "model_permission_blocked",
+                         "organization_restricted", "invalid_api_key", "rate_limit_exceeded",
+                         "tool_use_failed", "context_length_exceeded", "invalid_request_error"}:
+            code = candidate
+    except (OSError, ValueError, TypeError):
+        pass
+    reasons = {
+        400: "요청이 거부되었습니다. 모델 이름과 도구 호출 형식을 확인하세요.",
+        401: "API 키가 거부되었습니다. Streamlit Secrets의 키를 확인하세요.",
+        403: "접근이 거부되었습니다. Groq 계정·모델 권한 또는 접근 제한을 확인하세요.",
+        404: "요청한 모델 또는 API 경로를 찾지 못했습니다. GROQ_MODEL을 확인하세요.",
+        422: "요청 형식이 올바르지 않습니다. 모델 및 도구 호출 설정을 확인하세요.",
+        429: "호출 한도에 도달했습니다. 잠시 후 다시 시도하세요.",
+    }
+    reason = reasons.get(status, "Groq 서비스 오류입니다. 잠시 후 다시 시도하세요." if status >= 500 else "Groq 요청이 거부되었습니다.")
+    logger.error("TreaSurv Groq HTTP status=%s error_code=%s", status, code)
+    return RuntimeError(f"Groq 오류 [HTTP {status} / {code}]: {reason}")
+
 
 TOOLS = [
     {"type": "function", "function": {
@@ -54,9 +86,9 @@ def ask(question, d, history, key, model):
             with urllib.request.urlopen(request, timeout=25) as response:
                 message = json.load(response)["choices"][0]["message"]
         except urllib.error.HTTPError as exc:
-            reasons = {401: "API 키를 확인하세요.", 429: "호출 한도에 도달했습니다. 잠시 후 다시 시도하세요.", 400: "모델 이름과 도구 호출 지원을 확인하세요."}
-            raise RuntimeError(reasons.get(exc.code, "AI 서버 응답 오류입니다. 잠시 후 다시 시도하세요.")) from None
-        except (urllib.error.URLError, TimeoutError, KeyError, ValueError):
+            raise api_error(exc) from None
+        except (urllib.error.URLError, TimeoutError, KeyError, ValueError, IndexError, TypeError) as exc:
+            logger.error("TreaSurv Groq connection_or_response_error=%s", type(exc).__name__)
             raise RuntimeError("AI 연결에 실패했습니다. 네트워크와 모델 설정을 확인하세요.") from None
         calls = message.get("tool_calls") or []
         if not calls:
